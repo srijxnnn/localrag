@@ -13,6 +13,8 @@ import (
 
 const defaultTopK = 3
 
+var askChatModel string
+
 var askCmd = &cobra.Command{
 	Use:   "ask <question>",
 	Short: "Ask a question about indexed documents",
@@ -44,13 +46,30 @@ var askCmd = &cobra.Command{
 		}
 
 		top := search.TopK(queryVec, chunks, defaultTopK)
-		for i, c := range top {
-			fmt.Printf("--- match %d (score %.4f, %s) ---\n%s\n", i+1, search.Cosine(queryVec, c.Embedding), c.DocumentPath, c.Text)
+		prompt := buildRAGPrompt(q, top)
+
+		out := cmd.OutOrStdout()
+		if err := client.GenerateStream(askChatModel, prompt, out); err != nil {
+			return err
 		}
+		_, _ = fmt.Fprintln(out)
 		return nil
 	},
 }
 
+func buildRAGPrompt(question string, chunks []store.Chunk) string {
+	var b strings.Builder
+	b.WriteString("Use the following context to answer the question. If the answer is not contained in the context, say that you do not know.\n\nContext:\n\n")
+	for i, c := range chunks {
+		fmt.Fprintf(&b, "[Source %d: %s]\n%s\n\n", i+1, c.DocumentPath, c.Text)
+	}
+	b.WriteString("Question: ")
+	b.WriteString(question)
+	b.WriteString("\n\nAnswer:")
+	return b.String()
+}
+
 func init() {
+	askCmd.Flags().StringVar(&askChatModel, "model", "llama3.2:3b", "Ollama model for generation (must be pulled locally)")
 	rootCmd.AddCommand(askCmd)
 }

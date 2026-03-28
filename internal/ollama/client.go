@@ -1,9 +1,11 @@
 package ollama
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 )
 
@@ -54,6 +56,9 @@ func (c *Client) Generate(model, prompt string) (string, error) {
 		return "", fmt.Errorf("ollama generate: %w", err)
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", errGenerateHTTP(resp, model)
+	}
 
 	var result struct {
 		Response string `json:"response"`
@@ -62,4 +67,62 @@ func (c *Client) Generate(model, prompt string) (string, error) {
 		return "", fmt.Errorf("ollama generate decode: %w", err)
 	}
 	return result.Response, nil
+}
+
+// GenerateStream streams the generated text to out (one POST, NDJSON lines with stream: true).
+func (c *Client) GenerateStream(model, prompt string, out io.Writer) error {
+	body, err := json.Marshal(map[string]any{
+		"model":  model,
+		"prompt": prompt,
+		"stream": true,
+	})
+	if err != nil {
+		return err
+	}
+
+	resp, err := http.Post(c.BaseURL+"/api/generate", "application/json", bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("ollama generate: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return errGenerateHTTP(resp, model)
+	}
+
+	scanner := bufio.NewScanner(resp.Body)
+	buf := make([]byte, 0, 64*1024)
+	scanner.Buffer(buf, 1024*1024)
+
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if len(line) == 0 {
+			continue
+		}
+		var chunk struct {
+			Response string `json:"response"`
+			Done     bool   `json:"done"`
+		}
+		if err := json.Unmarshal(line, &chunk); err != nil {
+			continue
+		}
+		if chunk.Response != "" {
+			if _, err := io.WriteString(out, chunk.Response); err != nil {
+				return err
+			}
+		}
+		if chunk.Done {
+			break
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("ollama generate stream: %w", err)
+	}
+	return nil
+}
+
+func errGenerateHTTP(resp *http.Response, model string) error {
+	if resp.StatusCode == http.StatusNotFound {
+		return fmt.Errorf("model %q is not available (pull it or pass --model). Run: ollama pull %s", model, model)
+	}
+	return fmt.Errorf("ollama generate: %s", resp.Status)
 }
