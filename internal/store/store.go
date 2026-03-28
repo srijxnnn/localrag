@@ -28,6 +28,15 @@ type Store struct {
 	db *sql.DB
 }
 
+// Chunk is one indexed text segment with its embedding vector.
+type Chunk struct {
+	ID           int64
+	DocumentID   int64
+	DocumentPath string
+	Text         string
+	Embedding    []float64
+}
+
 // Init opens or creates the database at dbPath, applies schema, and returns a Store.
 func Init(dbPath string) (*Store, error) {
 	db, err := sql.Open("sqlite", dbPath)
@@ -121,6 +130,40 @@ func DecodeEmbedding(blob []byte) ([]float64, error) {
 	for i := range out {
 		u := binary.LittleEndian.Uint64(blob[i*8:])
 		out[i] = math.Float64frombits(u)
+	}
+	return out, nil
+}
+
+// AllChunks loads every chunk with its document path and decoded embedding.
+func (s *Store) AllChunks() ([]Chunk, error) {
+	rows, err := s.db.Query(`
+		SELECT c.id, c.document_id, d.path, c.text, c.embedding
+		FROM chunks c
+		JOIN documents d ON d.id = c.document_id
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("all chunks query: %w", err)
+	}
+	defer rows.Close()
+
+	var out []Chunk
+	for rows.Next() {
+		var (
+			c          Chunk
+			embeddingB []byte
+		)
+		if err := rows.Scan(&c.ID, &c.DocumentID, &c.DocumentPath, &c.Text, &embeddingB); err != nil {
+			return nil, fmt.Errorf("all chunks scan: %w", err)
+		}
+		emb, err := DecodeEmbedding(embeddingB)
+		if err != nil {
+			return nil, err
+		}
+		c.Embedding = emb
+		out = append(out, c)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("all chunks rows: %w", err)
 	}
 	return out, nil
 }
