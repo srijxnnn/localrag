@@ -37,6 +37,14 @@ type Chunk struct {
 	Embedding    []float64
 }
 
+// ListedDocument is one indexed file with metadata for `rag list`.
+type ListedDocument struct {
+	ID         int64
+	Path       string
+	AddedAt    int64 // Unix seconds
+	ChunkCount int64
+}
+
 // Init opens or creates the database at dbPath, applies schema, and returns a Store.
 func Init(dbPath string) (*Store, error) {
 	db, err := sql.Open("sqlite", dbPath)
@@ -96,6 +104,34 @@ func (s *Store) SaveDocument(path string) (int64, error) {
 		return 0, err
 	}
 	return id, nil
+}
+
+// ListDocuments returns every document with its chunk count, ordered by path.
+func (s *Store) ListDocuments() ([]ListedDocument, error) {
+	rows, err := s.db.Query(`
+		SELECT d.id, d.path, d.added_at, COUNT(c.id)
+		FROM documents d
+		LEFT JOIN chunks c ON c.document_id = d.id
+		GROUP BY d.id
+		ORDER BY d.path ASC
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list documents: %w", err)
+	}
+	defer rows.Close()
+
+	var out []ListedDocument
+	for rows.Next() {
+		var d ListedDocument
+		if err := rows.Scan(&d.ID, &d.Path, &d.AddedAt, &d.ChunkCount); err != nil {
+			return nil, fmt.Errorf("list documents scan: %w", err)
+		}
+		out = append(out, d)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("list documents rows: %w", err)
+	}
+	return out, nil
 }
 
 // SaveChunk stores one chunk and its embedding vector for a document.

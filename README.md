@@ -1,5 +1,7 @@
 # localrag
 
+<div align="center">
+
 **Query your documents locally with AI — no cloud, no API keys.**
 
 [![Go](https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat&logo=go)](https://go.dev/)
@@ -9,6 +11,8 @@
 _Index `.txt` / `.md` files, retrieve the best chunks with cosine similarity, and answer questions with a local model — all on your machine._
 
 [Features](#features) · [Quick start](#quick-start) · [Commands](#commands) · [How it works](#how-it-works)
+
+</div>
 
 ---
 
@@ -72,7 +76,7 @@ rag ask "Summarize the refund section" --model mistral
 | `rag init`           | Create `.rag/` in the current directory and initialize the SQLite database. Fails if already initialized.                 |
 | `rag add <path>`     | Read a **single** `.txt` or `.md` file, chunk it, embed with `nomic-embed-text`, and store vectors.                       |
 | `rag ask <question>` | Embed the question, pick the top **3** chunks by cosine similarity, then stream an answer (default model: `llama3.2:3b`). |
-| `rag list`           | Placeholder; full document listing is not wired up yet.                                                                   |
+| `rag list`           | Show indexed paths, chunk counts per file, and when each was added (RFC3339).                                             |
 
 Global behavior:
 
@@ -121,8 +125,7 @@ internal/search/  # Cosine similarity + TopK
 
 ## Limitations & roadmap
 
-- Only `**.txt**` and `**.md**` files are supported for `rag add` today.
-- `**rag list**` is not yet a real index listing.
+- Only `.txt` and `.md` files are supported for `rag add` today.
 - Retrieval is **brute-force TopK over all chunks** — fine for small corpora; larger indexes may need a dedicated vector DB or ANN later.
 
 Contributions and issues are welcome.
