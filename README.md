@@ -1,6 +1,6 @@
-# localrag
-
 <div align="center">
+
+# localrag
 
 **Query your documents locally with AI — no cloud, no API keys.**
 
