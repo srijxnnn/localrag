@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/srijxnnn/localrag/internal/ollama"
 )
 
 var askCmd = &cobra.Command{
@@ -13,7 +14,14 @@ var askCmd = &cobra.Command{
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		q := strings.Join(args, " ")
-		fmt.Printf("Asking: %s\n", q)
+
+		client := ollama.New("http://localhost:11434")
+		vec, err := client.Embed("nomic-embed-text", q)
+		if err != nil {
+			fmt.Println("error:", err)
+			return
+		}
+		fmt.Printf("embedding length: %d\n", len(vec))
 	},
 }
 
