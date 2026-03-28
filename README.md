@@ -1,18 +1,14 @@
-
-
 # localrag
 
 **Query your documents locally with AI — no cloud, no API keys.**
 
-[Go](https://go.dev/)
-[Ollama](https://ollama.com/)
-[SQLite](https://sqlite.org/)
+[![Go](https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat&logo=go)](https://go.dev/)
+[![Ollama](https://img.shields.io/badge/Ollama-embed%20%26%20chat-111111?style=flat&logo=ollama)](https://ollama.com/)
+[![SQLite](https://img.shields.io/badge/SQLite-vector%20store-003B57?style=flat&logo=sqlite)](https://sqlite.org/)
 
-*Index `.txt` / `.md` files, retrieve the best chunks with cosine similarity, and answer questions with a local model — all on your machine.*
+_Index `.txt` / `.md` files, retrieve the best chunks with cosine similarity, and answer questions with a local model — all on your machine._
 
 [Features](#features) · [Quick start](#quick-start) · [Commands](#commands) · [How it works](#how-it-works)
-
-
 
 ---
 
@@ -28,10 +24,11 @@
 1. **[Go](https://go.dev/dl/)** 1.26+ (see `go.mod`).
 2. **[Ollama](https://ollama.com/)** installed and running (`ollama serve` is usually started automatically).
 3. **Models pulled** (defaults below):
-  ```bash
-   ollama pull nomic-embed-text
-   ollama pull llama3.2:3b
-  ```
+
+```bash
+ ollama pull nomic-embed-text
+ ollama pull llama3.2:3b
+```
 
 ## Install
 
@@ -70,14 +67,12 @@ rag ask "Summarize the refund section" --model mistral
 
 ## Commands
 
-
 | Command              | Description                                                                                                               |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | `rag init`           | Create `.rag/` in the current directory and initialize the SQLite database. Fails if already initialized.                 |
 | `rag add <path>`     | Read a **single** `.txt` or `.md` file, chunk it, embed with `nomic-embed-text`, and store vectors.                       |
 | `rag ask <question>` | Embed the question, pick the top **3** chunks by cosine similarity, then stream an answer (default model: `llama3.2:3b`). |
 | `rag list`           | Placeholder; full document listing is not wired up yet.                                                                   |
-
 
 Global behavior:
 
@@ -102,10 +97,7 @@ flowchart LR
   end
 ```
 
-
-
 **Defaults** (see `internal/chunk` and `internal/cli`):
-
 
 | Setting         | Value                                         |
 | --------------- | --------------------------------------------- |
@@ -115,7 +107,6 @@ flowchart LR
 | Overlap         | 100 characters                                |
 | Top K           | 3                                             |
 | Ollama URL      | `http://localhost:11434`                      |
-
 
 ## Project layout
 
